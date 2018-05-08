@@ -15,6 +15,8 @@ type alias Entity =
     { x : Float
     , y : Float
     , direction : Direction
+    , velocity : Float
+    , acceleration : Float
     }
 
 
@@ -40,7 +42,7 @@ init : Flags -> ( Model, Cmd Msg )
 init flags =
     ( { charactersPath = flags.charactersPath
       , elapsedTime = 0
-      , mario = { x = 0, y = 0, direction = Left }
+      , mario = { x = 0, y = 350, direction = Left, velocity = 0.1, acceleration = 1.05 }
       , keyPressed = "Nothing pressed"
       }
     , Cmd.none
@@ -71,7 +73,11 @@ update msg model =
             ( { model | keyPressed = toString keyCode }, Cmd.none )
 
         KeyUp keyCode ->
-            ( { model | keyPressed = "Nothing pressed" }, Cmd.none )
+            let
+                deceleratedMario =
+                  decelerateMario model.mario
+            in
+                ( { model | keyPressed = "Nothing pressed", mario = deceleratedMario }, Cmd.none)
 
 
 
@@ -94,6 +100,31 @@ view model =
                 [ drawMario model.mario model.charactersPath ]
             ]
 
+decelerateMario : Entity -> Entity
+decelerateMario mario =
+    ( { mario | velocity = 0.1, acceleration = 1.05 } )
+
+accelerate : Entity -> Entity
+accelerate mario =
+    let
+        currentVelocity =
+            mario.velocity
+
+        currentAcceleration =
+            mario.acceleration
+
+        velocityLog =
+             Debug.log "Velocity" (toString currentVelocity)
+
+        accelerationLog =
+             Debug.log "Acceleration" (toString currentAcceleration)
+    in
+        if currentVelocity >= 0.7 then
+          { mario | acceleration = 0 }
+        else
+          { mario | velocity = currentVelocity * currentAcceleration }
+
+
 
 moveMario : Time -> String -> Entity -> Entity
 moveMario dt keyPressed mario =
@@ -103,11 +134,14 @@ moveMario dt keyPressed mario =
 
         rightArrow =
             "39"
+
+        acceleratedMario =
+            accelerate mario
     in
         if keyPressed == leftArrow then
-            { mario | x = mario.x - dt / 10, direction = Left }
+            { acceleratedMario | x = acceleratedMario.x - acceleratedMario.velocity * dt, direction = Left }
         else if keyPressed == rightArrow then
-            { mario | x = mario.x + dt / 10, direction = Right }
+            { acceleratedMario | x = acceleratedMario.x + acceleratedMario.velocity * dt, direction = Right }
         else
             mario
 
